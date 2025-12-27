@@ -2,211 +2,59 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Spring WebSocket Chat</title>
+    <title>Chat App</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            padding: 30px;
-            max-width: 600px;
-            margin: auto;
-            background: #f0f2f5;
-        }
-
-        h2 {
-            text-align: center;
-            color: #333;
-        }
-
-        #chat {
-            border: 1px solid #ddd;
-            height: 400px;
-            overflow-y: auto;
-            padding: 15px;
-            margin-bottom: 15px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        #controls {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            margin: 0;
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        input[type="text"] {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-
-        button {
-            padding: 10px 16px;
-            background: #007bff;
+            align-items: center;
+            justify-content: center;
             color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
         }
-
-        button:hover {
-            background: #0056b3;
+        .container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
-
-        button:disabled {
-            background: #aaa;
-            cursor: not-allowed;
-        }
-
-        #messageArea {
-            display: none;
-            gap: 10px;
-        }
-
-        .system {
-            font-style: italic;
-            color: #666;
-            font-size: 0.95em;
-            margin: 8px 0;
-        }
-
-        .message {
-            margin: 8px 0;
-            line-height: 1.4;
-        }
-
-        .sender {
+        h1 { font-size: 3em; margin-bottom: 20px; }
+        p { font-size: 1.2em; margin-bottom: 40px; opacity: 0.9; }
+        .google-btn {
+            display: inline-block;
+            background: white;
+            color: #444;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 18px;
             font-weight: bold;
-            color: #007bff;
+            text-decoration: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: 0.3s;
         }
-
-        .own .sender {
-            color: #28a745;
+        .google-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
         }
-
-        .timestamp {
-            color: #999;
-            font-size: 0.85em;
-            margin-left: 8px;
+        .google-btn img {
+            height: 20px;
+            margin-right: 10px;
+            vertical-align: middle;
         }
     </style>
 </head>
 <body>
-
-<h2>Live Chat</h2>
-
-<div id="controls">
-    <input type="text" id="sender" placeholder="Your name" />
-    <button id="connectBtn">Connect</button>
+<div class="container">
+    <h1>Welcome to Chat</h1>
+    <p>Join the conversation with your Google account</p>
+    <a href="/oauth2/authorization/google" class="google-btn">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+        Sign in with Google
+    </a>
 </div>
-
-<div id="chat"></div>
-
-<div id="messageArea" style="display: none; gap: 10px;">
-    <input type="text" id="message" placeholder="Type your message..." />
-    <button id="sendBtn">Send</button>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
-<script>
-    let stompClient = null;
-    let username = '';
-
-    function connect() {
-        username = document.getElementById('sender').value.trim();
-        if (!username) {
-            alert('Please enter your name before connecting.');
-            return;
-        }
-
-        const socketUrl = window.location.origin + '/ws';
-        const socket = new SockJS(socketUrl);
-        stompClient = Stomp.over(socket);
-
-        stompClient.connect({}, function () {
-            document.getElementById('connectBtn').disabled = true;
-            document.getElementById('sender').disabled = true;
-            document.getElementById('messageArea').style.display = 'flex';
-            document.getElementById('message').focus();
-
-            stompClient.subscribe('/topic/public', function (messageOutput) {
-                const msg = JSON.parse(messageOutput.body);
-                displayMessage(msg);
-            });
-
-            // Send JOIN message
-            stompClient.send("/app/chat.addUser", {}, JSON.stringify({
-                sender: username,
-                type: 'JOIN'
-            }));
-
-        }, function(error) {
-            alert('Connection failed. Please try again.');
-            console.error(error);
-        });
-    }
-
-    function sendMessage() {
-        const content = document.getElementById('message').value.trim();
-        if (content && stompClient && stompClient.connected) {
-            stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({
-                sender: username,
-                content: content,
-                type: 'CHAT'
-            }));
-            document.getElementById('message').value = '';
-        }
-    }
-
-    function displayMessage(message) {
-        const chat = document.getElementById('chat');
-        const div = document.createElement('div');
-
-        if (message.type === 'JOIN' || message.type === 'LEAVE') {
-            div.textContent = `${message.sender} ${message.type === 'JOIN' ? 'joined' : 'left'} the chat.`;
-            if (message.timestamp) {
-                const timeSpan = document.createElement('span');
-                timeSpan.textContent = ` (${message.timestamp})`;
-                timeSpan.className = 'timestamp';
-                div.appendChild(timeSpan);
-            }
-            div.className = 'system';
-        } else if (message.type === 'CHAT') {
-            div.className = 'message';
-            if (message.sender === username) div.classList.add('own');
-
-            const senderSpan = document.createElement('span');
-            senderSpan.textContent = (message.sender === username ? 'You' : message.sender) + ': ';
-            senderSpan.className = 'sender';
-            div.appendChild(senderSpan);
-
-            div.appendChild(document.createTextNode(message.content));
-
-            if (message.timestamp) {
-                const timeSpan = document.createElement('span');
-                timeSpan.textContent = ` (${message.timestamp})`;
-                timeSpan.className = 'timestamp';
-                div.appendChild(timeSpan);
-            }
-        }
-
-        chat.appendChild(div);
-        chat.scrollTop = chat.scrollHeight;
-    }
-
-    // Event listeners
-    document.getElementById('connectBtn').addEventListener('click', connect);
-    document.getElementById('sendBtn').addEventListener('click', sendMessage);
-    document.getElementById('message').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            sendMessage();
-        }
-    });
-</script>
-
 </body>
 </html>
