@@ -12,12 +12,12 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth->auth
-                        .requestMatchers("/", "/index.html","/chat.html", "/js/**", "/css/**", "/images/**").permitAll()
+                        .requestMatchers("/", "/index.html", "/js/**", "/css/**", "/images/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 ->oauth2
                         .loginPage("/")
-                        .defaultSuccessUrl("/chat.html", true)
+                        .defaultSuccessUrl("/chat", true)
                 )
                 .logout(logout->logout
                         .logoutSuccessUrl("/")
