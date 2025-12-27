@@ -129,12 +129,12 @@
 
 <div class="header">
     <div class="user-info">
-        <img th:src="${#authentication.principal.attributes.picture}"
-             th:alt="${#authentication.principal.attributes.name}"
-             onerror="this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent('${#authentication.principal.attributes.name ?: "User"}') + '&background=4285f4&color=fff&size=45&rounded=true'"
+        <img th:src="${#authentication.principal?.attributes?.picture}"
+             th:alt="${#authentication.principal?.attributes?.name ?: 'User'}"
+             onerror="this.src='https://ui-avatars.com/api/?name=' + encodeURIComponent('${#authentication.principal?.attributes?.name ?: "User"}') + '&background=4285f4&color=fff&size=45&rounded=true'"
         class="avatar">
         <div>
-            <div class="username" th:text="${#authentication.principal.attributes.name}">User</div>
+            <div class="username" th:text="${#authentication.principal?.attributes?.name ?: 'User'}">User</div>
             <a href="/logout" class="logout">Logout</a>
         </div>
     </div>
@@ -152,8 +152,8 @@
 <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
 <script th:inline="javascript">
     let stompClient = null;
-    const username = /*[[${#authentication.principal.attributes.name}]]*/ 'User';
-    const userPicture = /*[[${#authentication.principal.attributes.picture}]]*/ null;
+    const username = /*[[${#authentication.principal?.attributes?.name ?: 'User'}]]*/ 'User';
+    const userPicture = /*[[${#authentication.principal?.attributes?.picture}]]*/ null;
 
     function connect() {
         const socket = new SockJS('/ws');
