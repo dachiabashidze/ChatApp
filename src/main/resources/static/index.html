@@ -9,39 +9,88 @@
             padding: 30px;
             max-width: 600px;
             margin: auto;
+            background: #f0f2f5;
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
         }
 
         #chat {
-            border: 1px solid #ccc;
-            height: 300px;
+            border: 1px solid #ddd;
+            height: 400px;
             overflow-y: auto;
-            padding: 10px;
-            margin-bottom: 10px;
-            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
         #controls {
             display: flex;
             gap: 10px;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         input[type="text"] {
             flex: 1;
-            padding: 8px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
         }
 
         button {
-            padding: 8px 12px;
+            padding: 10px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #aaa;
+            cursor: not-allowed;
+        }
+
+        #messageArea {
+            display: none;
+            gap: 10px;
         }
 
         .system {
             font-style: italic;
-            color: #888;
+            color: #666;
+            font-size: 0.95em;
+            margin: 8px 0;
         }
 
-        .own {
+        .message {
+            margin: 8px 0;
+            line-height: 1.4;
+        }
+
+        .sender {
             font-weight: bold;
+            color: #007bff;
+        }
+
+        .own .sender {
+            color: #28a745;
+        }
+
+        .timestamp {
+            color: #999;
+            font-size: 0.85em;
+            margin-left: 8px;
         }
     </style>
 </head>
@@ -56,7 +105,7 @@
 
 <div id="chat"></div>
 
-<div id="messageArea" style="display: none;">
+<div id="messageArea" style="display: none; gap: 10px;">
     <input type="text" id="message" placeholder="Type your message..." />
     <button id="sendBtn">Send</button>
 </div>
@@ -74,7 +123,7 @@
             return;
         }
 
-        const socketUrl = window.location.origin + '/ws'; // dynamic domain
+        const socketUrl = window.location.origin + '/ws';
         const socket = new SockJS(socketUrl);
         stompClient = Stomp.over(socket);
 
@@ -89,19 +138,21 @@
                 displayMessage(msg);
             });
 
+            // Send JOIN message
             stompClient.send("/app/chat.addUser", {}, JSON.stringify({
                 sender: username,
                 type: 'JOIN'
             }));
 
         }, function(error) {
-            alert('Connection failed: ' + error);
+            alert('Connection failed. Please try again.');
+            console.error(error);
         });
     }
 
     function sendMessage() {
         const content = document.getElementById('message').value.trim();
-        if (content && stompClient) {
+        if (content && stompClient && stompClient.connected) {
             stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({
                 sender: username,
                 content: content,
@@ -113,30 +164,47 @@
 
     function displayMessage(message) {
         const chat = document.getElementById('chat');
-        const p = document.createElement('p');
+        const div = document.createElement('div');
 
-        if (message.type === 'JOIN') {
-            p.textContent = `${message.sender} joined the chat.`;
-            p.className = 'system';
-        } else if (message.type === 'LEAVE') {
-            p.textContent = `${message.sender} left the chat.`;
-            p.className = 'system';
+        if (message.type === 'JOIN' || message.type === 'LEAVE') {
+            div.textContent = `${message.sender} ${message.type === 'JOIN' ? 'joined' : 'left'} the chat.`;
+            if (message.timestamp) {
+                const timeSpan = document.createElement('span');
+                timeSpan.textContent = ` (${message.timestamp})`;
+                timeSpan.className = 'timestamp';
+                div.appendChild(timeSpan);
+            }
+            div.className = 'system';
         } else if (message.type === 'CHAT') {
-            const span = document.createElement('span');
-            span.textContent = message.sender + ': ';
-            if (message.sender === username) span.className = 'own';
-            p.appendChild(span);
-            p.appendChild(document.createTextNode(message.content));
+            div.className = 'message';
+            if (message.sender === username) div.classList.add('own');
+
+            const senderSpan = document.createElement('span');
+            senderSpan.textContent = (message.sender === username ? 'You' : message.sender) + ': ';
+            senderSpan.className = 'sender';
+            div.appendChild(senderSpan);
+
+            div.appendChild(document.createTextNode(message.content));
+
+            if (message.timestamp) {
+                const timeSpan = document.createElement('span');
+                timeSpan.textContent = ` (${message.timestamp})`;
+                timeSpan.className = 'timestamp';
+                div.appendChild(timeSpan);
+            }
         }
 
-        chat.appendChild(p);
+        chat.appendChild(div);
         chat.scrollTop = chat.scrollHeight;
     }
 
+    // Event listeners
     document.getElementById('connectBtn').addEventListener('click', connect);
     document.getElementById('sendBtn').addEventListener('click', sendMessage);
     document.getElementById('message').addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') sendMessage();
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
     });
 </script>
 
